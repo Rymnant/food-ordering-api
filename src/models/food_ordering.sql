@@ -20,13 +20,28 @@ CREATE TABLE menu (
     FOREIGN KEY (category_id) REFERENCES category (category_id)
 );
 
--- Table: customer
+-- Table: customer (updated with password)
 CREATE TABLE customer (
     customer_id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
     email TEXT NOT NULL UNIQUE,
     phone TEXT,
     address TEXT,
+    password TEXT NOT NULL,
+    is_active BOOLEAN DEFAULT 1,
+    last_update TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Table: admin
+CREATE TABLE admin (
+    admin_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT NOT NULL UNIQUE,
+    email TEXT NOT NULL UNIQUE,
+    name TEXT NOT NULL,
+    password TEXT NOT NULL,
+    role TEXT DEFAULT 'admin',
+    is_active BOOLEAN DEFAULT 1,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     last_update TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -80,3 +95,7 @@ INSERT INTO menu (category_id, name, description, price, image_url) VALUES
     (2, 'Jus Jeruk', 'Jus jeruk segar', 12000, 'jusjeruk.jpg'),
     (3, 'Es Krim', 'Es krim vanilla dengan topping coklat', 15000, 'eskrim.jpg'),
     (3, 'Pudding', 'Pudding coklat dengan saus vanilla', 13000, 'pudding.jpg');
+
+-- Insert default admin (password: admin123)
+INSERT INTO admin (username, email, name, password, role) VALUES
+    ('admin', 'admin@foodordering.com', 'System Administrator', '$2a$12$LsczR7waruycidX9KyPkUO7HMGk9MYNtwegPYO7LqG5wkViYFBSui', 'super_admin');

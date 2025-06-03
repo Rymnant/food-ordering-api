@@ -1,11 +1,9 @@
 const express = require('express');
-const sqlite3 = require('sqlite3').verbose();
-const bodyParser = require('body-parser');
 const cors = require('cors');
-const path = require('path');
-const fs = require('fs');
+const bodyParser = require('body-parser');
+const { initDatabase } = require('./database/db');
+require('dotenv').config();
 
-// Initialize express app
 const app = express();
 const PORT = process.env.PORT || 6900;
 
@@ -14,50 +12,44 @@ app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-// Database setup
-const dbPath = path.resolve(__dirname, 'food_ordering.db');
-const dbExists = fs.existsSync(dbPath);
-
-// Create database connection
-const db = new sqlite3.Database(dbPath, (err) => {
-  if (err) {
-    console.error('Error connecting to database:', err.message);
-  } else {
-    console.log('Connected to the food_ordering database.');
-    
-    // If database doesn't exist, initialize it with schema
-    if (!dbExists) {
-      console.log('Initializing database with schema...');
-      const schema = fs.readFileSync(path.resolve(__dirname, 'models/food_ordering.sql'), 'utf8');
-      
-      // Execute each statement separately
-      const statements = schema.split(';').filter(stmt => stmt.trim());
-      
-      db.serialize(() => {
-        statements.forEach((statement) => {
-          if (statement.trim()) {
-            db.run(`${statement};`, (err) => {
-              if (err) {
-                console.error('Error executing statement:', err.message);
-                console.error('Statement:', statement);
-              }
-            });
-          }
-        });
-        console.log('Database initialized successfully');
-      });
-    }
-  }
-});
-
 // Import routes
-const routes = require('./routes/routes')(db);
+const authRoutes = require('./routes/auth');
+const adminRoutes = require('./routes/admin');
+const routes = require('./routes/routes');
 
-// Use routes
+// Use routes dengan urutan yang benar
+app.use('/auth', authRoutes);
+app.use('/admin', adminRoutes);
 app.use('/', routes);
 
-// Start server
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-  console.log(`API Endpoint: http://localhost:${PORT}`);
+// Error handling middleware
+app.use((err, req, res, next) => {
+    console.error(err.stack);
+    res.status(500).json({
+        success: false,
+        error: 'Something went wrong!'
+    });
 });
+
+// 404 handler
+app.use('*', (req, res) => {
+    res.status(404).json({
+        success: false,
+        error: 'Route not found'
+    });
+});
+
+// Initialize database and start server
+initDatabase().then(() => {
+    app.listen(PORT, () => {
+        console.log(`Food Ordering API server is running on port ${PORT}`);
+        console.log(`Visit: http://localhost:${PORT}/health`);
+        console.log(`Admin login: POST http://localhost:${PORT}/auth/admin/login`);
+        console.log(`Customer register: POST http://localhost:${PORT}/auth/customer/register`);
+    });
+}).catch(err => {
+    console.error('Failed to initialize database:', err);
+    process.exit(1);
+});
+
+module.exports = app;
